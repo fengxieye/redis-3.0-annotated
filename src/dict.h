@@ -120,7 +120,7 @@ typedef struct dictht {
     // 哈希表大小
     unsigned long size;
     
-    // 哈希表大小掩码，用于计算索引值
+    // 哈希表大小掩码，用于计算索引值,确保下标不越界 哈希值&sizemask=index下标
     // 总是等于 size - 1
     unsigned long sizemask;
 
