@@ -757,6 +757,7 @@ int _dictClear(dict *d, dictht *ht, void(callback)(void *)) {
     for (i = 0; i < ht->size && ht->used > 0; i++) {
         dictEntry *he, *nextHe;
 
+        //？todo
         if (callback && (i & 65535) == 0) callback(d->privdata);
 
         // 跳过空索引
@@ -1054,7 +1055,8 @@ dictEntry *dictGetRandomKey(dict *d)
     // 进行单步 rehash
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
-    // 如果正在 rehash ，那么将 1 号哈希表也作为随机查找的目标
+    // 如果正在 rehash ，那么将 1 号哈希表也作为随机查找的目标,
+    //如果没有自动缩小字典，效率会比较低todo
     if (dictIsRehashing(d)) {
         // T = O(N)
         do {
