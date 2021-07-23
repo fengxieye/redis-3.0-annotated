@@ -114,7 +114,7 @@ typedef struct dictType {
  */
 typedef struct dictht {
     
-    // 哈希表数组
+    // 哈希表数组。指针对应一个数组，数组的值为指针，所以双指针
     dictEntry **table;
 
     // 哈希表大小
