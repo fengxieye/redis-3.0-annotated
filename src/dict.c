@@ -1056,7 +1056,6 @@ dictEntry *dictGetRandomKey(dict *d)
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
     // 如果正在 rehash ，那么将 1 号哈希表也作为随机查找的目标,
-    //如果没有自动缩小字典，效率会比较低todo
     if (dictIsRehashing(d)) {
         // T = O(N)
         do {
