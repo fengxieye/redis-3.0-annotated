@@ -1088,6 +1088,7 @@ struct redisServer {
     /* RDB persistence */
 
     // 自从上次 SAVE 执行以来，数据库被修改的次数
+    //因为没有被保存所有为脏 zjhadd
     long long dirty;                /* Changes to DB from the last save */
 
     // BGSAVE 执行前的数据库被修改次数

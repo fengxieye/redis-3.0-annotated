@@ -349,6 +349,7 @@ size_t sdsAllocSize(sds s) {
  * 复杂度
  *  T = O(1)
  */
+// 比如client读入socket的数据后，需要调用此函数更新len zjh
 void sdsIncrLen(sds s, int incr) {
     struct sdshdr *sh = (void*) (s-(sizeof(struct sdshdr)));
 
@@ -557,6 +558,11 @@ sds sdscpy(sds s, const char *t) {
  *
  * The function returns the lenght of the null-terminated string
  * representation stored at 's'. */
+
+/*
+* 将longlong的数字转为字符串 zjh
+* 返回字符串的大小
+*/
 #define SDS_LLSTR_SIZE 21
 int sdsll2str(char *s, long long value) {
     char *p, aux;
@@ -577,6 +583,7 @@ int sdsll2str(char *s, long long value) {
     l = p-s;
     *p = '\0';
 
+    //反转字符串
     /* Reverse the string. */
     p--;
     while(s < p) {
@@ -904,34 +911,28 @@ void sdsrange(sds s, int start, int end) {
     size_t newlen, len = sdslen(s);
 
     if (len == 0) return;
-    //处理负数
     if (start < 0) {
         start = len+start;
         if (start < 0) start = 0;
     }
     if (end < 0) {
         end = len+end;
-        //超过了倒数第一
         if (end < 0) end = 0;
     }
     newlen = (start > end) ? 0 : (end-start)+1;
     if (newlen != 0) {
         if (start >= (signed)len) {
-            //起始超过了尾部
             newlen = 0;
         } else if (end >= (signed)len) {
-            //超过尾部，终点放到尾部
             end = len-1;
-            //重新计算
             newlen = (start > end) ? 0 : (end-start)+1;
         }
-    } else {//取到空字符串
+    } else {
         start = 0;
     }
 
     // 如果有需要，对字符串进行移动
     // T = O(N)
-    //复制字符串
     if (start && newlen) memmove(sh->buf, sh->buf+start, newlen);
 
     // 添加终结符
@@ -992,7 +993,6 @@ int sdscmp(const sds s1, const sds s2) {
     l1 = sdslen(s1);
     l2 = sdslen(s2);
     minlen = (l1 < l2) ? l1 : l2;
-    //memcmp(const void *str1, const void *str2, size_t n)) 把存储区 str1 和存储区 str2 的前 n 个字节进行比较
     cmp = memcmp(s1,s2,minlen);
 
     if (cmp == 0) return l1-l2;
@@ -1043,10 +1043,9 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
         return tokens;
     }
     
-    // T = O(N^2)//长度小于分隔符时终止
+    // T = O(N^2)
     for (j = 0; j < (len-(seplen-1)); j++) {
         /* make sure there is room for the next element and the final one */
-        //后面如果有分隔符，则至少有两个字符串
         if (slots < elements+2) {
             sds *newtokens;
 
@@ -1057,13 +1056,11 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
         }
         /* search the separator */
         // T = O(N)
-        //可能一个字符使用函数效率低
         if ((seplen == 1 && *(s+j) == sep[0]) || (memcmp(s+j,sep,seplen) == 0)) {
             tokens[elements] = sdsnewlen(s+start,j-start);
             if (tokens[elements] == NULL) goto cleanup;
             elements++;
             start = j+seplen;
-            //此处-1因为循环判断里会+1
             j = j+seplen-1; /* skip the separator */
         }
     }
@@ -1074,7 +1071,6 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
     *count = elements;
     return tokens;
 
-    //中间某处分配失败，则全部清除
 cleanup:
     {
         int i;
@@ -1126,7 +1122,6 @@ sds sdscatrepr(sds s, const char *p, size_t len) {
         case '\a': s = sdscatlen(s,"\\a",2); break;
         case '\b': s = sdscatlen(s,"\\b",2); break;
         default:
-             //字符是否是可打印的。可打印字符是非控制字符的字符
             if (isprint(*p))
                 s = sdscatprintf(s,"%c",*p);
             else
@@ -1378,14 +1373,12 @@ sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
 
 /* Join an array of C strings using the specified separator (also a C string).
  * Returns the result as an sds string. */
-//加入一个字符串数据，使用sep进行分隔，如(["ab"]["cd"],2,"-"), 结果ab-cd
 sds sdsjoin(char **argv, int argc, char *sep) {
     sds join = sdsempty();
     int j;
 
     for (j = 0; j < argc; j++) {
         join = sdscat(join, argv[j]);
-        //结尾处不需要分隔
         if (j != argc-1) join = sdscat(join,sep);
     }
     return join;

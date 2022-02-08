@@ -55,7 +55,7 @@ struct sdshdr {
     // buf 中剩余可用空间的长度
     int free;
 
-    // 数据空间，不定义大小，柔性数组，不计入struct的长度
+    // 数据空间
     char buf[];
 };
 

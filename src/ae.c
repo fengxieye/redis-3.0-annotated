@@ -224,6 +224,7 @@ void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
     }
 
     // 取消对给定 fd 的给定事件的监视
+    //不同的io多路复用，具体函数不同 zjh
     aeApiDelEvent(eventLoop, fd, mask);
 }
 

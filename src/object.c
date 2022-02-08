@@ -65,11 +65,11 @@ robj *createRawStringObject(char *ptr, size_t len) {
 // 因此这个字符也是不可修改的
 robj *createEmbeddedStringObject(char *ptr, size_t len) {
     robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr)+len+1);
-    struct sdshdr *sh = (void*)(o+1);
+    struct sdshdr *sh = (void*)(o+1); //+1是偏移了一个sizeof(robj) //zjhadd
 
     o->type = REDIS_STRING;
     o->encoding = REDIS_ENCODING_EMBSTR;
-    o->ptr = sh+1;
+    o->ptr = sh+1; //+1是偏移了一个sizeof(sdshdr),指向sdshdr的char zjhadd
     o->refcount = 1;
     o->lru = LRU_CLOCK();
 
@@ -79,6 +79,7 @@ robj *createEmbeddedStringObject(char *ptr, size_t len) {
         memcpy(sh->buf,ptr,len);
         sh->buf[len] = '\0';
     } else {
+        //置零 zjhadd
         memset(sh->buf,0,len+1);
     }
     return o;
@@ -562,8 +563,9 @@ robj *tryObjectEncoding(robj *o) {
         {
             decrRefCount(o);
             incrRefCount(shared.integers[value]);
-            return shared.integers[value];
+            return shared.integers[value]; //一个整数对象
         } else {
+            //embeded 类型暂时不释放，在释放o的时候会顺带释放
             if (o->encoding == REDIS_ENCODING_RAW) sdsfree(o->ptr);
             o->encoding = REDIS_ENCODING_INT;
             o->ptr = (void*) value;

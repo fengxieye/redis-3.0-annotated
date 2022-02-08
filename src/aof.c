@@ -460,6 +460,7 @@ void flushAppendOnlyFile(int force) {
                 server.aof_last_write_errno = errno;
             }
         } else {
+            //没有全部写入 zjh
             if (can_log) {
                 redisLog(REDIS_WARNING,"Short write while writing to "
                                        "the AOF file: (nwritten=%lld, "
@@ -469,6 +470,7 @@ void flushAppendOnlyFile(int force) {
             }
 
             // 尝试移除新追加的不完整内容
+            //把本次写入的内存删除 zjh
             if (ftruncate(server.aof_fd, server.aof_current_size) == -1) {
                 if (can_log) {
                     redisLog(REDIS_WARNING, "Could not remove short write "
@@ -501,6 +503,7 @@ void flushAppendOnlyFile(int force) {
 
             /* Trim the sds buffer if there was a partial write, and there
              * was no way to undo it with ftruncate(2). */
+            //把已经写入的截取掉，剩下的下次再试 zjh
             if (nwritten > 0) {
                 server.aof_current_size += nwritten;
                 sdsrange(server.aof_buf,nwritten,-1);
@@ -527,6 +530,7 @@ void flushAppendOnlyFile(int force) {
      * 如果 AOF 缓存的大小足够小的话，那么重用这个缓存，
      * 否则的话，释放 AOF 缓存。
      */
+    //写入了缓存，但没有写入磁盘 zjh
     if ((sdslen(server.aof_buf)+sdsavail(server.aof_buf)) < 4000) {
         // 清空缓存中的内容，等待重用
         sdsclear(server.aof_buf);
@@ -566,17 +570,13 @@ void flushAppendOnlyFile(int force) {
         // 更新最后一次执行 fsync 的时间
         server.aof_last_fsync = server.unixtime;
     }
-
-    // 其实上面无论执行 if 部分还是 else 部分都要更新 fsync 的时间
-    // 可以将代码挪到下面来
-    // server.aof_last_fsync = server.unixtime;
 }
 
 /*
  * 根据传入的命令和命令参数，将它们还原成协议格式。
  */
 sds catAppendOnlyGenericCommand(sds dst, int argc, robj **argv) {
-    char buf[32];
+    char buf[32]; //只用来写入大小，32的长度够了 zjhadd
     int len, j;
     robj *o;
 
@@ -1458,6 +1458,7 @@ int rewriteAppendOnlyFile(char *filename) {
      * if the generate DB file is ok. 
      *
      * 原子地改名，用重写后的新 AOF 文件覆盖旧 AOF 文件
+     * 这里覆盖的只是临时文件 zjh
      */
     if (rename(tmpfile,filename) == -1) {
         redisLog(REDIS_WARNING,"Error moving temp append only file on the final destination: %s", strerror(errno));

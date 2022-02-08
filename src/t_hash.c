@@ -51,7 +51,8 @@ void hashTypeTryConversion(robj *o, robj **argv, int start, int end) {
     // 如果对象不是 ziplist 编码，那么直接返回
     if (o->encoding != REDIS_ENCODING_ZIPLIST) return;
 
-    // 检查所有输入对象，看它们的字符串值是否超过了指定长度
+    // 检查所有输入对象，看它们的字符串值是否超过了指定长度 
+    // hash_max_ziplist_value初始值为 = REDIS_HASH_MAX_ZIPLIST_VALUE = 64  zjh
     for (i = start; i <= end; i++) {
         if (sdsEncodedObject(argv[i]) &&
             sdslen(argv[i]->ptr) > server.hash_max_ziplist_value)
@@ -90,6 +91,7 @@ void hashTypeTryObjectEncoding(robj *subject, robj **o1, robj **o2) {
  * 查找失败时，函数返回 -1 。
  * 查找成功时，返回 0 。
  */
+//主要要解码field 再查找 zjh
 int hashTypeGetFromZiplist(robj *o, robj *field,
                            unsigned char **vstr,
                            unsigned int *vlen,
@@ -351,6 +353,7 @@ int hashTypeDelete(robj *o, robj *field) {
             if (fptr != NULL) {
                 // 删除域和值
                 zl = ziplistDelete(zl,&fptr);
+                //此时fptr指向下一个节点 zjh
                 zl = ziplistDelete(zl,&fptr);
                 o->ptr = zl;
                 deleted = 1;
@@ -366,6 +369,7 @@ int hashTypeDelete(robj *o, robj *field) {
 
             /* Always check if the dictionary needs a resize after a delete. */
             // 删除成功时，看字典是否需要收缩
+            //dict的收缩
             if (htNeedsResize(o->ptr)) dictResize(o->ptr);
         }
 
@@ -457,7 +461,8 @@ void hashTypeReleaseIterator(hashTypeIterator *hi) {
  */
 int hashTypeNext(hashTypeIterator *hi) {
 
-    // 迭代 ziplist
+    // 迭代 ziplist 
+    // 每次取连续的两个节点值作为 key-v zjh
     if (hi->encoding == REDIS_ENCODING_ZIPLIST) {
         unsigned char *zl;
         unsigned char *fptr, *vptr;
@@ -510,6 +515,7 @@ int hashTypeNext(hashTypeIterator *hi) {
  *
  * 从 ziplist 编码的哈希中，取出迭代器指针当前指向节点的域或值。
  */
+//done
 void hashTypeCurrentFromZiplist(hashTypeIterator *hi, int what,
                                 unsigned char **vstr,
                                 unsigned int *vlen,
@@ -719,6 +725,7 @@ void hsetCommand(redisClient *c) {
     update = hashTypeSet(o,c->argv[2],c->argv[3]);
 
     // 返回状态：显示 field-value 对是新添加还是更新
+    //hset返回0是更新 zjh
     addReply(c, update ? shared.czero : shared.cone);
 
     // 发送键修改信号
@@ -803,6 +810,7 @@ void hmsetCommand(redisClient *c) {
     server.dirty++;
 }
 
+// Hincrby 命令用于为哈希表中的字段值加上指定增量值。 zjh
 void hincrbyCommand(redisClient *c) {
     long long value, incr, oldvalue;
     robj *o, *current, *new;
@@ -821,6 +829,7 @@ void hincrbyCommand(redisClient *c) {
             decrRefCount(current);
             return;
         }
+        //取出值后可以释放，current是值复制的 zjh
         decrRefCount(current);
     } else {
         // 如果值当前不存在，那么默认为 0
@@ -843,6 +852,7 @@ void hincrbyCommand(redisClient *c) {
     hashTypeTryObjectEncoding(o,&c->argv[2],NULL);
     // 关联键和新的值对象，如果已经有对象存在，那么用新对象替换它
     hashTypeSet(o,c->argv[2],new);
+    //hashTypeSet里incrref，所以decrref zjh
     decrRefCount(new);
 
     // 将计算结果用作回复
@@ -858,6 +868,7 @@ void hincrbyCommand(redisClient *c) {
     server.dirty++;
 }
 
+//Hincrbyfloat 命令用于为哈希表中的字段值加上指定浮点数增量值。 zjh
 void hincrbyfloatCommand(redisClient *c) {
     double long value, incr;
     robj *o, *current, *new, *aux;
@@ -909,6 +920,7 @@ void hincrbyfloatCommand(redisClient *c) {
     // 在传播 INCRBYFLOAT 命令时，总是用 SET 命令来替换 INCRBYFLOAT 命令
     // 从而防止因为不同的浮点精度和格式化造成 AOF 重启时的数据不一致
     aux = createStringObject("HSET",4);
+    //修改参数 ，把命令 改成 set .. new zjh
     rewriteClientCommandArgument(c,0,aux);
     decrRefCount(aux);
     rewriteClientCommandArgument(c,3,new);
@@ -994,6 +1006,7 @@ void hmgetCommand(redisClient *c) {
     }
 }
 
+//Hdel 命令用于删除哈希表 key 中的一个或多个指定字段，不存在的字段将被忽略.返回删除的数量 zjh
 void hdelCommand(redisClient *c) {
     robj *o;
     int j, deleted = 0, keyremoved = 0;
@@ -1100,6 +1113,7 @@ void genericHgetallCommand(redisClient *c, int flags) {
 
     // 迭代节点，并取出元素
     hi = hashTypeInitIterator(o);
+    //取到节点 zjh
     while (hashTypeNext(hi) != REDIS_ERR) {
         // 取出键
         if (flags & REDIS_HASH_KEY) {
@@ -1118,6 +1132,7 @@ void genericHgetallCommand(redisClient *c, int flags) {
     redisAssert(count == length);
 }
 
+//Hkeys 命令用于获取哈希表中的所有域（field） zjh
 void hkeysCommand(redisClient *c) {
     genericHgetallCommand(c,REDIS_HASH_KEY);
 }
@@ -1141,6 +1156,15 @@ void hexistsCommand(redisClient *c) {
     addReply(c, hashTypeExists(o,c->argv[2]) ? shared.cone : shared.czero);
 }
 
+/*
+redis HSCAN 命令基本语法如下：
+
+HSCAN key cursor [MATCH pattern] [COUNT count]
+cursor - 游标。
+pattern - 匹配的模式。
+count - 指定从数据集里返回多少元素，默认值为 10 ，不是一定按这个值来返回数量
+zjh
+*/
 void hscanCommand(redisClient *c) {
     robj *o;
     unsigned long cursor;

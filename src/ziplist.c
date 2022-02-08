@@ -307,6 +307,8 @@ address                                |                          |        |
 
 /*
  * 保存 ziplist 节点信息的结构
+ * 使用这个作为临时保存节点的信息，但真正写入压缩链表不是这样的结构,而是 previouslenth(一或五字节)+encoding（1/2/5字节）+content zjhadd
+ * 真实长度 prevrawlen+len+sizeof（content） zjhadd
  */
 typedef struct zlentry {
 
@@ -320,12 +322,15 @@ typedef struct zlentry {
 
     // 当前节点 header 的大小
     // 等于 prevrawlensize + lensize
+    //不写入压缩链表 zjhadd
     unsigned int headersize;
 
     // 当前节点值所使用的编码类型
+    //不写入压缩链表
     unsigned char encoding;
 
     // 指向当前节点的指针
+    //不写入压缩链表 zjhadd
     unsigned char *p;
 
 } zlentry;
@@ -734,6 +739,7 @@ static zlentry zipEntry(unsigned char *p) {
 
     // e.prevrawlensize 保存着编码前一个节点的长度所需的字节数
     // e.prevrawlen 保存着前一个节点的长度
+    // 从p中取出长度信息放入e
     // T = O(1)
     ZIP_DECODE_PREVLEN(p, e.prevrawlensize, e.prevrawlen);
 
@@ -747,7 +753,7 @@ static zlentry zipEntry(unsigned char *p) {
     // 计算头结点的字节数
     e.headersize = e.prevrawlensize + e.lensize;
 
-    // 记录指针
+    // 记录指针，指向当前节点
     e.p = p;
 
     return e;
@@ -932,6 +938,7 @@ static unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p
             //                                   |<-->|
             //                            为新 header 腾出的空间
             // T = O(N)
+            //移动prevrawlensize之后的所有数据 zjhadd
             memmove(np+rawlensize,
                 np+next.prevrawlensize,
                 curlen-noffset-next.prevrawlensize-1);
@@ -957,6 +964,7 @@ static unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p
                 // 运行到这里，
                 // 说明 cur 节点的长度正好可以编码到 next 节点的 header 中
                 // T = O(1)
+                //只是更新prelen的值  zjhadd
                 zipPrevEncodeLength(p+rawlen,rawlen);
             }
 
@@ -1039,7 +1047,7 @@ static unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsig
         } else {
 
             // 执行这里，表示被删除节点之后已经没有其他节点了
-
+            // 指向first前一个的节点，因为first是要删除的 zjhadd
             /* The entire tail was deleted. No need to move memory. */
             // T = O(1)
             ZIPLIST_TAIL_OFFSET(zl) =
@@ -1051,6 +1059,7 @@ static unsigned char *__ziplistDelete(unsigned char *zl, unsigned char *p, unsig
         offset = first.p-zl;
         zl = ziplistResize(zl, intrev32ifbe(ZIPLIST_BYTES(zl))-totlen+nextdiff);
         ZIPLIST_INCR_LENGTH(zl,-deleted);
+        //返回p节点，方便接着删除 zjhadd
         p = zl+offset;
 
         /* When nextdiff != 0, the raw length of the next entry has changed, so
@@ -1158,10 +1167,11 @@ static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsig
         /* Subtract one because of the ZIP_END bytes */
         // 移动现有元素，为新元素的插入空间腾出位置
         // T = O(N)
+        // ,p-nextdiff 多复制了一段值在前面，但下面的zipPrevEncodeLength 会把多的字节修改 zjhadd
         memmove(p+reqlen,p-nextdiff,curlen-offset-1+nextdiff);
 
         /* Encode this entry's raw length in the next entry. */
-        // 将新节点的长度编码至后置节点
+        // 将新节点的长度编码写至后置节点
         // p+reqlen 定位到后置节点
         // reqlen 是新节点的长度
         // T = O(1)
@@ -1179,6 +1189,7 @@ static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsig
         // 那么程序需要将 nextdiff 记录的字节数也计算到表尾偏移量中
         // 这样才能让表尾偏移量正确对齐表尾节点
         // T = O(1)
+        //如果下一个节点已经是尾节点了就不要再移动 zjhadd
         tail = zipEntry(p+reqlen);
         if (p[reqlen+tail.headersize+tail.len] != ZIP_END) {
             ZIPLIST_TAIL_OFFSET(zl) =
@@ -1235,7 +1246,8 @@ static unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsig
  */
 unsigned char *ziplistPush(unsigned char *zl, unsigned char *s, unsigned int slen, int where) {
 
-    // 根据 where 参数的值，决定将值推入到表头还是表尾
+    // 根据 where 参数的值，决定将值推入到表头还是表尾，
+    //表尾的话p指向 end zjhadd
     unsigned char *p;
     p = (where == ZIPLIST_HEAD) ? ZIPLIST_ENTRY_HEAD(zl) : ZIPLIST_ENTRY_END(zl);
 
@@ -1548,8 +1560,10 @@ unsigned char *ziplistFind(unsigned char *p, unsigned char *vstr, unsigned int v
 
         ZIP_DECODE_PREVLENSIZE(p, prevlensize);
         ZIP_DECODE_LENGTH(p + prevlensize, encoding, lensize, len);
+        //q 是当前的值的指针处 zjhadd
         q = p + prevlensize + lensize;
 
+        //每隔skip个节点检查一次
         if (skipcnt == 0) {
 
             /* Compare current entry with specified entry */

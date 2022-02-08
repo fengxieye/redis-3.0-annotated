@@ -195,6 +195,7 @@ static void _dictReset(dictht *ht)
  *
  * T = O(1)
  */
+//zjh
 dict *dictCreate(dictType *type,
         void *privDataPtr)
 {
@@ -438,6 +439,7 @@ long long timeInMilliseconds(void) {
  *
  * T = O(N)
  */
+//sever主动进行rehash zjh
 int dictRehashMilliseconds(dict *d, int ms) {
     // 记录开始时间
     long long start = timeInMilliseconds();
@@ -600,6 +602,7 @@ int dictReplace(dict *d, void *key, void *val)
      * as the previous one. In this context, think to reference counting,
      * you want to increment (set), and then decrement (free), and not the
      * reverse. */
+    //注意这里的顺序，因为新值可能和旧值完全一样，如果先释放原项可能会使引用计数不合法。 zjh
     // 先保存原有的值的指针
     auxentry = *entry;
     // 然后设置新的值
@@ -607,6 +610,7 @@ int dictReplace(dict *d, void *key, void *val)
     dictSetVal(d, entry, val);
     // 然后释放旧值
     // T = O(1)
+    //这里的value已成了新值是否有问题 zjh todo
     dictFreeVal(d, &auxentry);
 
     return 0;
@@ -689,7 +693,7 @@ static int dictGenericDelete(dict *d, const void *key, int nofree)
                 else
                     d->ht[table].table[idx] = he->next;
 
-                // 释放调用键和值的释放函数？
+                // 释放调用键和值的释放函数
                 if (!nofree) {
                     dictFreeKey(d, he);
                     dictFreeVal(d, he);
@@ -757,7 +761,6 @@ int _dictClear(dict *d, dictht *ht, void(callback)(void *)) {
     for (i = 0; i < ht->size && ht->used > 0; i++) {
         dictEntry *he, *nextHe;
 
-        //？todo
         if (callback && (i & 65535) == 0) callback(d->privdata);
 
         // 跳过空索引
@@ -1055,7 +1058,7 @@ dictEntry *dictGetRandomKey(dict *d)
     // 进行单步 rehash
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
-    // 如果正在 rehash ，那么将 1 号哈希表也作为随机查找的目标,
+    // 如果正在 rehash ，那么将 1 号哈希表也作为随机查找的目标
     if (dictIsRehashing(d)) {
         // T = O(N)
         do {
@@ -1491,6 +1494,7 @@ static int _dictKeyIndex(dict *d, const void *key)
 
         // 如果运行到这里时，说明 0 号哈希表中所有节点都不包含 key
         // 如果这时 rehahs 正在进行，那么继续对 1 号哈希表进行 rehash
+        // 如果rehash就直接放入表1中 zjh
         if (!dictIsRehashing(d)) break;
     }
 

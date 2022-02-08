@@ -2553,7 +2553,7 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
             if (sdslen(l) >= 18 && !memcmp(l,"slave_repl_offset:",18))
                 ri->slave_repl_offset = strtoull(l+18,NULL,10);
         }
-    }
+    }// end while zjh
 
     // 更新刷新 INFO 命令回复的时间
     ri->info_refresh = mstime();
@@ -2988,8 +2988,8 @@ int sentinelSendHello(sentinelRedisInstance *ri) {
     sentinelRedisInstance *master = (ri->flags & SRI_MASTER) ? ri : ri->master;
 
     // 获取地址信息
-    sentinelAddr *master_addr = sentinelGetCurrentMasterAddress(master);
 
+    sentinelAddr *master_addr = sentinelGetCurrentMasterAddress(master);
     /* Try to obtain our own IP address. */
     // 获取实例自身的地址
     if (anetSockName(ri->cc->c.fd,ip,sizeof(ip),NULL) == -1) return REDIS_ERR;
@@ -3399,6 +3399,7 @@ void sentinelCommand(redisClient *c) {
 
         /* Vote for the master (or fetch the previous vote) if the request
          * includes a runid, otherwise the sender is not seeking for a vote. */
+        //对方发送了runid
         if (ri && ri->flags & SRI_MASTER && strcasecmp(c->argv[5]->ptr,"*")) {
             leader = sentinelVoteLeader(ri,(uint64_t)req_epoch,
                                             c->argv[5]->ptr,
@@ -4238,7 +4239,7 @@ void sentinelStartFailover(sentinelRedisInstance *master) {
  *
  * 如果故障转移操作成功开始，那么函数返回非 0 值。
  */
-int sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
+int  sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
 
     /* We can't failover if the master is not in O_DOWN state. */
     if (!(master->flags & SRI_O_DOWN)) return 0;
@@ -4704,6 +4705,7 @@ void sentinelFailoverReconfNextSlave(sentinelRedisInstance *master) {
          * the next state, consider it reconfigured even if it is not.
          * Sentinels will detect the slave as misconfigured and fix its
          * configuration later. */
+        //超时的服务器忽略 zjh
         if ((slave->flags & SRI_RECONF_SENT) &&
             (mstime() - slave->slave_reconf_sent_time) >
             SENTINEL_SLAVE_RECONF_TIMEOUT)

@@ -181,6 +181,7 @@ typedef struct aeEventLoop {
     int stop;
 
     // 多路复用库的私有数据
+    // 不同的io多路复用数据不同 zjh
     void *apidata; /* This is used for polling API specific data */
 
     // 在处理事件前要执行的函数

@@ -635,7 +635,7 @@ dictType hashDictType = {
     dictEncObjHash,             /* hash function */
     NULL,                       /* key dup */
     NULL,                       /* val dup */
-    dictEncObjKeyCompare,       /* key compare */
+    dictEncObjKeyCompare,       /* key compare */ //字符串和数字的比较方式zjh
     dictRedisObjectDestructor,  /* key destructor */
     dictRedisObjectDestructor   /* val destructor */
 };
@@ -942,6 +942,7 @@ void activeExpireCycle(int type) {
                 break;
             }
             // 获取数据库中键值对的数量
+            //字典的总大小 zjhadd
             slots = dictSlots(db->expires);
             // 当前时间
             now = mstime();
@@ -1258,6 +1259,7 @@ void databasesCron(void) {
             for (j = 0; j < dbs_per_call; j++) {
                 int work_done = incrementallyRehash(rehash_db % server.dbnum);
                 rehash_db++;
+                //每次只做一此渐进式hash（1ms），然后就退出
                 if (work_done) {
                     /* If the function did some work, stop here, we'll do
                      * more at the next cron loop. */
@@ -1431,6 +1433,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* Check if a background saving or AOF rewrite in progress terminated. */
     // 检查 BGSAVE 或者 BGREWRITEAOF 是否已经执行完毕
+    //检查子进程 zjhadd
     if (server.rdb_child_pid != -1 || server.aof_child_pid != -1) {
         int statloc;
         pid_t pid;

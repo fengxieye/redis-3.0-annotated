@@ -75,6 +75,7 @@ static int64_t _intsetGetEncoded(intset *is, int pos, uint8_t enc) {
     // 之后 member(&vEnc, ..., sizeof(vEnc)) 再从数组中拷贝出正确数量的字节
     // 如果有需要的话， memrevEncifbe(&vEnc) 会对拷贝出的字节进行大小端转换
     // 最后将值返回
+    // + pos会根据指针的内容大小来移动对应的值
     if (enc == INTSET_ENC_INT64) {
         memcpy(&v64,((int64_t*)is->contents)+pos,sizeof(v64));
         memrev64ifbe(&v64);
@@ -140,6 +141,10 @@ intset *intsetNew(void) {
     intset *is = zmalloc(sizeof(intset));
 
     // 设置初始编码
+    //大端小端模式转换intrev32ifbe zjhadd
+    //假设一个32位 unsigned int型数据0x12 34 56 78，大小端8位存储方式如下：
+    //大端存储方式为0x12 34 56 78
+    //小端存储方式为0x78 56 34 12
     is->encoding = intrev32ifbe(INTSET_ENC_INT16);
 
     // 初始化元素数量
@@ -168,6 +173,7 @@ static intset *intsetResize(intset *is, uint32_t len) {
     // 注意这里使用的是 zrealloc ，
     // 所以如果新空间大小比原来的空间大小要大，
     // 那么数组原有的数据会被保留
+    //类型的大小+数组大小 zjhadd
     is = zrealloc(is,sizeof(intset)+size);
 
     return is;
@@ -265,6 +271,7 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
     // 注意，因为 value 的编码比集合原有的其他元素的编码都要大
     // 所以 value 要么大于集合中的所有元素，要么小于集合中的所有元素
     // 因此，value 只能添加到底层数组的最前端或最后端
+    //无论哪个都是需要往编码方式大的方式升级 zjh
     int prepend = value < 0 ? 1 : 0;
 
     /* First set new encoding and resize */
@@ -300,6 +307,7 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
     // 当添加新值时，原本的 | x | y | 的数据将被新值代替
     // |  new  |   x   |   y   |   z   |
     // T = O(N)
+    //根据源码的编码取值，根据现在的编码放值 zjh
     while(length--)
         _intsetSet(is,length+prepend,_intsetGetEncoded(is,length,curenc));
 

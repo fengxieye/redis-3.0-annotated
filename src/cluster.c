@@ -1412,6 +1412,7 @@ int clusterStartHandshake(char *ip, int port) {
 
     /* Set norm_ip as the normalized string representation of the node
      * IP address. */
+    //Linux下inet_pton和inet_ntop这2个IP地址转换函数 zjh
     if (sa.ss_family == AF_INET)
         inet_ntop(AF_INET,
             (void*)&(((struct sockaddr_in *)&sa)->sin_addr),
@@ -2090,7 +2091,7 @@ int clusterProcessPacket(clusterLink *link) {
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
                 return 0;
             }
-        }
+        } // end if (link->node) zjh
 
         /* Update the node address if it changed. */
         // 如果发送的消息为 PING 
@@ -2136,10 +2137,11 @@ int clusterProcessPacket(clusterLink *link) {
                 // 看是否可以撤销 FAIL
                 clearNodeFailureIfNeeded(link->node);
             }
-        }
+        }//end pong
 
         /* Check for role switch: slave -> master or master -> slave. */
         // 检测节点的身份信息，并在需要时进行更新
+        // 更新节点的主从信息 zjh
         if (sender) {
 
             // 发送消息的节点的 slaveof 为 REDIS_NODE_NULL_NAME
@@ -2420,8 +2422,8 @@ int clusterProcessPacket(clusterLink *link) {
          * accordingly. */
         resetManualFailover();
         server.cluster->mf_end = mstime() + REDIS_CLUSTER_MF_TIMEOUT;
-        server.cluster->mf_slave = sender;
         pauseClients(mstime()+(REDIS_CLUSTER_MF_TIMEOUT*2));
+        server.cluster->mf_slave = sender;
         redisLog(REDIS_WARNING,"Manual failover requested by slave %.40s.",
             sender->name);
     } else if (type == CLUSTERMSG_TYPE_UPDATE) {
@@ -2628,6 +2630,7 @@ void clusterSendMessage(clusterLink *link, unsigned char *msg, size_t msglen) {
  * It is guaranteed that this function will never have as a side effect
  * some node->link to be invalidated, so it is safe to call this function
  * from event handlers that will do stuff with node links later. */
+//--
 void clusterBroadcastMessage(void *buf, size_t len) {
     dictIterator *di;
     dictEntry *de;
@@ -2837,6 +2840,7 @@ void clusterSendPing(clusterLink *link, int type) {
     }
 
     // 计算信息长度
+    // clusterMsg结构体的长度包含两个clusterMsgDataGossip，但只会发送实际的gossip的数量 zjh
     totlen = sizeof(clusterMsg)-sizeof(union clusterMsgData);
     totlen += (sizeof(clusterMsgDataGossip)*gossipcount);
     // 将被选中节点的数量（gossip 信息中包含了多少个节点的信息）
@@ -2873,8 +2877,8 @@ void clusterSendPing(clusterLink *link, int type) {
  */
 #define CLUSTER_BROADCAST_ALL 0
 #define CLUSTER_BROADCAST_LOCAL_SLAVES 1
-void clusterBroadcastPong(int target) {
     dictIterator *di;
+void clusterBroadcastPong(int target) {
     dictEntry *de;
 
     // 遍历所有节点
@@ -3838,7 +3842,7 @@ void clusterCron(void) {
                 update_state = 1;
             }
         }
-    }
+    } //end while zjh
     dictReleaseIterator(di);
 
     /* If we are a slave node but the replication is still turned off,
@@ -4626,6 +4630,7 @@ void clusterCommand(redisClient *c) {
             /* If this slot is in migrating status but we have no keys
              * for it assigning the slot to another node will clear
              * the migratig status. */
+            //此节点是导出的节点 zjh
             if (countKeysInSlot(slot) == 0 &&
                 server.cluster->migrating_slots_to[slot])
                 server.cluster->migrating_slots_to[slot] = NULL;
@@ -4633,6 +4638,7 @@ void clusterCommand(redisClient *c) {
             /* If this node was importing this slot, assigning the slot to
              * itself also clears the importing status. */
             // 撤销本节点对 slot 的导入计划
+            //此节点是导入的节点 zjh
             if (n == myself &&
                 server.cluster->importing_slots_from[slot])
             {

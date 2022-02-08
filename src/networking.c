@@ -72,8 +72,8 @@ int listMatchObjects(void *a, void *b) {
 /*
  * 创建一个新客户端
  */
-redisClient *createClient(int fd) {
 
+redisClient *createClient(int fd) {
     // 分配空间
     redisClient *c = zmalloc(sizeof(redisClient));
 
@@ -404,8 +404,8 @@ void _addReplyStringToList(redisClient *c, char *s, size_t len) {
  * The following functions are the ones that commands implementations will call.
  * -------------------------------------------------------------------------- */
 
-void addReply(redisClient *c, robj *obj) {
 
+void addReply(redisClient *c, robj *obj) {
     // 为客户端安装写处理器到事件循环
     if (prepareClientToWrite(c) != REDIS_OK) return;
 
@@ -798,9 +798,11 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);
 
+//每次最多accept MAX_ACCEPTS_PER_CALL个，如果没有了就错误并且退出 zjh
     while(max--) {
         // accept 客户端连接
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
+        //已经没有新的连接了 zjh
         if (cfd == ANET_ERR) {
             if (errno != EWOULDBLOCK)
                 redisLog(REDIS_WARNING,

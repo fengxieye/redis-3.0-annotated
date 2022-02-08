@@ -374,6 +374,7 @@ long long addReplyReplicationBacklog(redisClient *c, long long offset) {
     skip = offset - server.repl_backlog_off;
     redisLog(REDIS_DEBUG, "[PSYNC] Skipping: %lld", skip);
 
+//从最新的索引repl_backlog_idx找到最旧的索引 zjh
     /* Point j to the oldest byte, that is actaully our
      * server.repl_backlog_off byte. */
     j = (server.repl_backlog_idx +
@@ -381,6 +382,7 @@ long long addReplyReplicationBacklog(redisClient *c, long long offset) {
         server.repl_backlog_size;
     redisLog(REDIS_DEBUG, "[PSYNC] Index of first byte: %lld", j);
 
+//要开始复制的索引 zjh
     /* Discard the amount of data to seek to the specified 'offset'. */
     j = (j + skip) % server.repl_backlog_size;
 
@@ -608,6 +610,7 @@ void syncCommand(redisClient *c) {
             /* Perfect, the server is already registering differences for
              * another slave. Set the right state, and copy the buffer. */
             // 幸运的情况，可以使用目前 BGSAVE 所生成的 RDB
+            //这时候写入backlog的命令会写入这个正在等待rdb的clirnt里，所以只要复制这个client的回复就可以了
             copyClientOutputBuffer(c,slave);
             c->replstate = REDIS_REPL_WAIT_BGSAVE_END;
             redisLog(REDIS_NOTICE,"Waiting for end of BGSAVE for SYNC");
@@ -1348,6 +1351,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     // 如果状态为 CONNECTING ，那么在进行初次同步之前，
     // 向主服务器发送一个非阻塞的 PONG 
     // 因为接下来的 RDB 文件发送非常耗时，所以我们想确认主服务器真的能访问
+    //因为写缓存为空，所以连上服务器之后此函数基本会一直触发 zjh
     if (server.repl_state == REDIS_REPL_CONNECTING) {
         redisLog(REDIS_NOTICE,"Non blocking connect for SYNC fired the event.");
         /* Delete the writable event so that the readable event remains
@@ -1411,6 +1415,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
 
     /* AUTH with the master if required. */
     // 进行身份验证
+    //阻塞的 zjh
     if(server.masterauth) {
         err = sendSynchronousCommand(fd,"AUTH",server.masterauth,NULL);
         if (err[0] == '-') {
@@ -1472,6 +1477,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
 
     /* Prepare a suitable temp file for bulk transfer */
     // 打开一个临时文件，用于写入和保存接下来从主服务器传来的 RDB 文件数据
+    //getpid()函数：获取进程识别码 zjh
     while(maxtries--) {
         snprintf(tmpfile,256,
             "temp-%d.%ld.rdb",(int)server.unixtime,(long int)getpid());

@@ -114,13 +114,13 @@ typedef struct dictType {
  */
 typedef struct dictht {
     
-    // 哈希表数组。指针对应一个数组，数组的值为指针，所以双指针
+    // 哈希表数组
     dictEntry **table;
 
     // 哈希表大小
     unsigned long size;
     
-    // 哈希表大小掩码，用于计算索引值,确保下标不越界 哈希值&sizemask=index下标
+    // 哈希表大小掩码，用于计算索引值
     // 总是等于 size - 1
     unsigned long sizemask;
 
@@ -182,6 +182,11 @@ typedef struct dictIterator {
     //             从而防止指针丢失
     dictEntry *entry, *nextEntry;
 
+    //zjh
+    // 对于unsafe的迭代器 遍历前根据dict的值计算一个fingerprint 
+    // 当迭代完成后 比较当前的fingerprint和迭代前的值是否相同
+    // 不同则说明在迭代过程中有增删操作 迭代器使用不合法
+    //释放的时候才检测，感觉用处不大
     long long fingerprint; /* unsafe iterator fingerprint for misuse detection */
 } dictIterator;
 

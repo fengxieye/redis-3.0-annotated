@@ -169,6 +169,7 @@ void setCommand(redisClient *c) {
             expire = next;
             j++;
         } else {
+            //参数错误 zjhadd
             addReply(c,shared.syntaxerr);
             return;
         }
@@ -329,6 +330,8 @@ void setrangeCommand(redisClient *c) {
     addReplyLongLong(c,sdslen(o->ptr));
 }
 
+//取范围值 zjhadd
+//命令 getrange
 void getrangeCommand(redisClient *c) {
     robj *o;
     long start, end;
@@ -571,6 +574,7 @@ void incrbyfloatCommand(redisClient *c) {
      * will not create differences in replicas or after an AOF restart. */
     // 在传播 INCRBYFLOAT 命令时，总是用 SET 命令来替换 INCRBYFLOAT 命令
     // 从而防止因为不同的浮点精度和格式化造成 AOF 重启时的数据不一致
+    //这里是把原来的命令进行修改 zjhadd
     aux = createStringObject("SET",3);
     rewriteClientCommandArgument(c,0,aux);
     decrRefCount(aux);
@@ -591,6 +595,7 @@ void appendCommand(redisClient *c) {
         // 键值对不存在，创建一个新的
         c->argv[2] = tryObjectEncoding(c->argv[2]);
         dbAdd(c->db,c->argv[1],c->argv[2]);
+        //新建的obj，需要引用加1
         incrRefCount(c->argv[2]);
         totlen = stringObjectLen(c->argv[2]);
     } else {
@@ -611,6 +616,7 @@ void appendCommand(redisClient *c) {
 
         /* Append the value */
         // 执行追加操作
+        //不会使用共享的string zjhadd
         o = dbUnshareStringValue(c->db,c->argv[1],o);
         o->ptr = sdscatlen(o->ptr,append->ptr,sdslen(append->ptr));
         totlen = sdslen(o->ptr);

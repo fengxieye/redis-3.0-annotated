@@ -113,6 +113,7 @@ int setTypeAdd(robj *subject, robj *value) {
  *
  * 删除成功返回 1 ，因为元素不存在而导致删除失败返回 0 。
  */
+//done
 int setTypeRemove(robj *setobj, robj *value) {
     long long llval;
 
@@ -372,6 +373,7 @@ unsigned long setTypeSize(robj *subject) {
  *
  * 新创建的结果字典会被预先分配为和原来的集合一样大。
  */
+//把inset转为dict zjh
 void setTypeConvert(robj *setobj, int enc) {
 
     setTypeIterator *si;
@@ -409,6 +411,7 @@ void setTypeConvert(robj *setobj, int enc) {
     }
 }
 
+//zjh sadd 添加元素
 void saddCommand(redisClient *c) {
     robj *set;
     int j, added = 0;
@@ -451,6 +454,9 @@ void saddCommand(redisClient *c) {
     addReplyLongLong(c,added);
 }
 
+/*
+Srem 命令用于移除集合中的一个或多个成员元素，不存在的成员元素会被忽略 zjh
+*/
 void sremCommand(redisClient *c) {
     robj *set;
     int j, deleted = 0, keyremoved = 0;
@@ -492,6 +498,7 @@ void sremCommand(redisClient *c) {
     addReplyLongLong(c,deleted);
 }
 
+//Redis Smove 命令将指定成员 member 元素从 source 集合移动到 destination 集合。 zjh
 void smoveCommand(redisClient *c) {
     robj *srcset, *dstset, *ele;
 
@@ -572,6 +579,7 @@ void smoveCommand(redisClient *c) {
     addReply(c,shared.cone);
 }
 
+//Sismember 命令判断成员元素是否是集合的成员 zjh
 void sismemberCommand(redisClient *c) {
     robj *set;
 
@@ -589,6 +597,8 @@ void sismemberCommand(redisClient *c) {
         addReply(c,shared.czero);
 }
 
+//Scard 命令返回集合中元素的数量。 zjh
+//在研究集合时，会遇到有关集合中的元素个数问题，我们把有限集合A的元素个数记为card（A） zjh
 void scardCommand(redisClient *c) {
     robj *o;
 
@@ -600,6 +610,7 @@ void scardCommand(redisClient *c) {
     addReplyLongLong(c,setTypeSize(o));
 }
 
+// SPOP 命令用于移除集合中的指定 key 的一个或多个随机元素，移除后会返回移除的元素。 zjh
 void spopCommand(redisClient *c) {
     robj *set, *ele, *aux;
     int64_t llele;
@@ -614,7 +625,9 @@ void spopCommand(redisClient *c) {
 
     // 将被取出元素从集合中删除
     if (encoding == REDIS_ENCODING_INTSET) {
+        //需要string的object返回 zjh
         ele = createStringObjectFromLongLong(llele);
+        //inset可能重分配内存，需要更新set->ptr zjh
         set->ptr = intsetRemove(set->ptr,llele,NULL);
     } else {
         incrRefCount(ele);
@@ -668,6 +681,7 @@ void spopCommand(redisClient *c) {
  */
 #define SRANDMEMBER_SUB_STRATEGY_MUL 3
 
+//srandmember 带count参数 zjh
 void srandmemberWithCountCommand(redisClient *c) {
     long l;
     unsigned long count, size;
@@ -874,6 +888,14 @@ void srandmemberWithCountCommand(redisClient *c) {
     }
 }
 
+/*
+SRANDMEMBER KEY [count]
+Redis Srandmember 命令用于返回集合中的一个随机元素。
+如果 count 为正数，且小于集合基数，那么命令返回一个包含 count 个元素的数组，数组中的元素各不相同。
+如果 count 大于等于集合基数，那么返回整个集合。
+如果 count 为负数，那么命令返回一个数组，数组中的元素可能会重复出现多次，而数组的长度为 count 的绝对值。
+该操作和 SPOP 相似，但 SPOP 将随机元素从集合中移除并返回，而 Srandmember 则仅仅返回随机元素，而不对集合进行任何改动。
+*/
 void srandmemberCommand(redisClient *c) {
     robj *set, *ele;
     int64_t llele;
@@ -941,11 +963,13 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
         // 取出对象
         // 第一次执行时，取出的是 dest 集合
         // 之后执行时，取出的都是 source 集合
+        //这里应该都是source才对 todo zjh
         robj *setobj = dstkey ?
             lookupKeyWrite(c->db,setkeys[j]) :
             lookupKeyRead(c->db,setkeys[j]);
 
         // 对象不存在，放弃执行，进行清理
+        //有空的set，则dest设为空并返回 zjh
         if (!setobj) {
             zfree(sets);
             if (dstkey) {
@@ -973,6 +997,7 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
     /* Sort sets from the smallest to largest, this will improve our
      * algorithm's performance */
     // 按基数对集合进行排序，这样提升算法的效率
+    //按size进行排序，因为取的是最小集合，只需要循环最小的集合就可以了 zjh
     qsort(sets,setnum,sizeof(robj*),qsortCompareSetsByCardinality);
 
     /* The first thing we should output is the total number of elements...
@@ -988,6 +1013,7 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
     } else {
         /* If we have a target key where to store the resulting set
          * create this key with an empty set inside */
+        //需要dset创建 zjh
         dstset = createIntsetObject();
     }
 
@@ -1031,6 +1057,7 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
                 /* Optimization... if the source object is integer
                  * encoded AND the target set is an intset, we can get
                  * a much faster path. */
+                //这里是为了加快速度不然都可以直接使用setTypeIsMember zjh
                 if (eleobj->encoding == REDIS_ENCODING_INT &&
                     sets[j]->encoding == REDIS_ENCODING_INTSET &&
                     !intsetFind((intset*)sets[j]->ptr,(long)eleobj->ptr))
@@ -1103,10 +1130,17 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
     zfree(sets);
 }
 
+//smembers 命令也是使用这个函数
+//Sinter 命令返回给定所有给定集合的交集。 多个集合
+//不存在的集合 key 被视为空集。 当给定集合当中有一个空集时，结果也为空集(根据集合运算定律)。
+//zjh
 void sinterCommand(redisClient *c) {
+    //c->argc-1个集合 zjh
     sinterGenericCommand(c,c->argv+1,c->argc-1,NULL);
 }
 
+//SINTERSTORE DESTINATION_KEY KEY KEY1..KEYN 
+//Redis Sinterstore 命令将给定集合之间的交集存储在指定的集合中。如果指定的集合已经存在，则将其覆盖。zjh
 void sinterstoreCommand(redisClient *c) {
     sinterGenericCommand(c,c->argv+2,c->argc-2,c->argv[1]);
 }
@@ -1121,6 +1155,7 @@ void sinterstoreCommand(redisClient *c) {
 void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *dstkey, int op) {
 
     // 集合数组
+    //多个set zjh
     robj **sets = zmalloc(sizeof(robj*)*setnum);
 
     setTypeIterator *si;
@@ -1169,6 +1204,7 @@ void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *
      *
      * 程序通过考察输入来决定使用那个算法
      */
+    //set0 和 其它集合的大小差为主要因素 zjh
     if (op == REDIS_OP_DIFF && sets[0]) {
         long long algo_one_work = 0, algo_two_work = 0;
 
@@ -1309,6 +1345,7 @@ void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *
     // 执行的是 SDIFF 或者 SUNION
     // 打印结果集中的所有元素
     if (!dstkey) {
+        //返回的结果个数cardinality zjh
         addReplyMultiBulkLen(c,cardinality);
 
         // 遍历并回复结果集中的元素
@@ -1355,22 +1392,35 @@ void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *
     zfree(sets);
 }
 
+//SUNION KEY KEY1..KEYN 返回给定集合的并集,即集合的所有元素 zjh
 void sunionCommand(redisClient *c) {
     sunionDiffGenericCommand(c,c->argv+1,c->argc-1,NULL,REDIS_OP_UNION);
 }
 
+//SUNIONSTORE destination key [key ...] zjh
+//给定集合的并集存储在指定的集合 destination 中。如果 destination 已经存在，则将其覆盖
 void sunionstoreCommand(redisClient *c) {
     sunionDiffGenericCommand(c,c->argv+2,c->argc-2,c->argv[1],REDIS_OP_UNION);
 }
 
+/*
+SDIFF FIRST_KEY OTHER_KEY1..OTHER_KEYN zjh
+返回第一个集合与其他集合之间的差异，也可以认为说第一个集合中独有的元素。不存在的集合 key 将视为空集
+key1 = {a,b,c,d}
+key2 = {c}
+key3 = {a,c,e}
+SDIFF key1 key2 key3 = {b,d}
+*/
 void sdiffCommand(redisClient *c) {
     sunionDiffGenericCommand(c,c->argv+1,c->argc-1,NULL,REDIS_OP_DIFF);
 }
 
+//将给定集合之间的差集存储在指定的集合中。如果指定的集合 key 已存在，则会被覆盖 zjh
 void sdiffstoreCommand(redisClient *c) {
     sunionDiffGenericCommand(c,c->argv+2,c->argc-2,c->argv[1],REDIS_OP_DIFF);
 }
 
+//sscan命令
 void sscanCommand(redisClient *c) {
     robj *set;
     unsigned long cursor;

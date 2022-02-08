@@ -610,8 +610,8 @@ int rdbSaveDoubleValue(rio *rdb, double val) {
          *
          * Under this assumptions we test if a double is inside an interval
          * where casting to long long is safe. Then using two castings we
-         * make sure the decimal part is zero. If all this is true we use
          * integer printing function that is much faster. */
+         * make sure the decimal part is zero. If all this is true we use
         double min = -4503599627370495; /* (2^52)-1 */
         double max = 4503599627370496; /* -(2^52) */
         if (val > min && val < max && val == ((double)((long long)val)))
@@ -1081,6 +1081,7 @@ int rdbSaveBackground(char *filename) {
     start = ustime();
 
     if ((childpid = fork()) == 0) {
+        //fork之后相当于分出一个子进程，也跑到这里，这里是子进程，父进程此时会走到else语句下面 zjhadd
         int retval;
 
         /* Child */
@@ -1106,12 +1107,13 @@ int rdbSaveBackground(char *filename) {
         }
 
         // 向父进程发送信号
+        //子进程退出 zjh
         exitFromChild((retval == REDIS_OK) ? 0 : 1);
 
     } else {
 
         /* Parent */
-
+        //父进程 zjhadd
         // 计算 fork() 执行的时间
         server.stat_fork_time = ustime()-start;
 
