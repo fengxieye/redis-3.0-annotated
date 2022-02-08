@@ -590,6 +590,7 @@ void keysCommand(redisClient *c) {
 
 /* This callback is used by scanGenericCommand in order to collect elements
  * returned by the dictionary iterator into a list. */
+//不同的类型返回的值不同，set不需要val zjh
 void scanCallback(void *privdata, const dictEntry *de) {
     void **pd = (void**) privdata;
     list *keys = pd[0];
@@ -755,6 +756,7 @@ void scanGenericCommand(redisClient *c, robj *o, unsigned long cursor) {
         count *= 2; /* We return key / value for this type. */
     }
 
+    //如果是dict的方式
     if (ht) {
         void *privdata[2];
 
@@ -782,7 +784,7 @@ void scanGenericCommand(redisClient *c, robj *o, unsigned long cursor) {
         unsigned char *vstr;
         unsigned int vlen;
         long long vll;
-
+        //ziplist的编码 zjh
         while(p) {
             ziplistGet(p,&vstr,&vlen,&vll);
             listAddNodeTail(keys,
@@ -829,6 +831,7 @@ void scanGenericCommand(redisClient *c, robj *o, unsigned long cursor) {
         /* If this is a hash or a sorted set, we have a flat list of
          * key-value elements, so if this element was filtered, remove the
          * value, or skip it if it was not filtered: we only match keys. */
+        //如果是zset或者hash，除了key还需要删除值 zjh
         if (o && (o->type == REDIS_ZSET || o->type == REDIS_HASH)) {
             node = nextnode;
             nextnode = listNextNode(node);

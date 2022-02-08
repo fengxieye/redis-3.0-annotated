@@ -37,6 +37,7 @@
 typedef struct aeApiState {
 
     // epoll_event 实例描述符
+    // 整个epoll的句柄
     int epfd;
 
     // 事件槽
