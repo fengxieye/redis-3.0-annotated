@@ -284,6 +284,8 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
 
         /* update span covered by update[i] as x is inserted here */
         // 计算新节点跨越的节点数量
+        // rank[0] 相当于新节点的前一个节点的排位，就是头节点到此节点的长度 zjh
+        // rank[i] 头节点到update[i]节点的level[i]层的长度 zjh
         x->level[i].span = update[i]->level[i].span - (rank[0] - rank[i]);
 
         // 更新新节点插入之后，沿途节点的 span 值

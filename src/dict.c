@@ -402,6 +402,7 @@ int dictRehash(dict *d, int n) {
             h = dictHashKey(d, de->key) & d->ht[1].sizemask;
 
             // 插入节点到新哈希表
+            // 这里是插入表头 zjh
             de->next = d->ht[1].table[h];
             d->ht[1].table[h] = de;
 
@@ -439,7 +440,7 @@ long long timeInMilliseconds(void) {
  *
  * T = O(N)
  */
-//sever主动进行rehash zjh
+//sever主动进行rehash，此时因为没有client的操作，所以不用担心迭代器 zjh
 int dictRehashMilliseconds(dict *d, int ms) {
     // 记录开始时间
     long long start = timeInMilliseconds();
@@ -602,7 +603,7 @@ int dictReplace(dict *d, void *key, void *val)
      * as the previous one. In this context, think to reference counting,
      * you want to increment (set), and then decrement (free), and not the
      * reverse. */
-    //注意这里的顺序，因为新值可能和旧值完全一样，如果先释放原项可能会使引用计数不合法。 zjh
+    // 注意这里的顺序，因为新值可能和旧值完全一样，如果先释放原项可能会使引用计数不合法。 zjh
     // 先保存原有的值的指针
     auxentry = *entry;
     // 然后设置新的值
@@ -610,7 +611,7 @@ int dictReplace(dict *d, void *key, void *val)
     dictSetVal(d, entry, val);
     // 然后释放旧值
     // T = O(1)
-    //这里的value已成了新值是否有问题 zjh todo
+    //如果没有定义释放函数则没有操作 zjh
     dictFreeVal(d, &auxentry);
 
     return 0;
@@ -1314,6 +1315,7 @@ unsigned long dictScan(dict *d,
     if (dictSize(d) == 0) return 0;
 
     // 迭代只有一个哈希表的字典
+    // 已经rehash完或没有rehash zjh
     if (!dictIsRehashing(d)) {
 
         // 指向哈希表
@@ -1332,6 +1334,7 @@ unsigned long dictScan(dict *d,
         }
 
     // 迭代有两个哈希表的字典
+    // 正在rehash zjh
     } else {
 
         // 指向两个哈希表
@@ -1362,6 +1365,7 @@ unsigned long dictScan(dict *d,
         // Iterate over indices in larger table             // 迭代大表中的桶
         // that are the expansion of the index pointed to   // 这些桶被索引的 expansion 所指向
         // by the cursor in the smaller table               //
+        // 一次把小表和大表的同一组数据，返回返回t0的槽位，以及t1里面所有可能发生迁移到的槽位，如8扩到16，一次把 小表的4 和大表的4 12都返回 zjh
         do {
             /* Emit entries at cursor */
             // 指向桶，并迭代桶中的所有节点
@@ -1493,8 +1497,8 @@ static int _dictKeyIndex(dict *d, const void *key)
         }
 
         // 如果运行到这里时，说明 0 号哈希表中所有节点都不包含 key
-        // 如果这时 rehahs 正在进行，那么继续对 1 号哈希表进行 rehash
-        // 如果rehash就直接放入表1中 zjh
+        // 如果这时 rehahs 正在进行，那么继续对 1 号哈希表进行查找
+        // 如果rehash是放入表1中 zjh
         if (!dictIsRehashing(d)) break;
     }
 
