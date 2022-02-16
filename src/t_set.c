@@ -961,9 +961,7 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
     for (j = 0; j < setnum; j++) {
 
         // 取出对象
-        // 第一次执行时，取出的是 dest 集合
-        // 之后执行时，取出的都是 source 集合
-        //这里应该都是source才对 todo zjh
+        // 这里应该都是source才对 zjh
         robj *setobj = dstkey ?
             lookupKeyWrite(c->db,setkeys[j]) :
             lookupKeyRead(c->db,setkeys[j]);
@@ -1130,7 +1128,7 @@ void sinterGenericCommand(redisClient *c, robj **setkeys, unsigned long setnum, 
     zfree(sets);
 }
 
-//smembers 命令也是使用这个函数
+//smembers 命令也是使用这个函数,相当于只有一个集合，合集就是该集合的所有值
 //Sinter 命令返回给定所有给定集合的交集。 多个集合
 //不存在的集合 key 被视为空集。 当给定集合当中有一个空集时，结果也为空集(根据集合运算定律)。
 //zjh
@@ -1337,6 +1335,7 @@ void sunionDiffGenericCommand(redisClient *c, robj **setkeys, int setnum, robj *
 
             /* Exit if result set is empty as any additional removal
              * of elements will have no effect. */
+            //已经没有元素了，没必要接着循环了 zjh
             if (cardinality == 0) break;
         }
     }

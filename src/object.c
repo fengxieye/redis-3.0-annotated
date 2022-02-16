@@ -63,8 +63,8 @@ robj *createRawStringObject(char *ptr, size_t len) {
 // 创建一个 REDIS_ENCODING_EMBSTR 编码的字符对象
 // 这个字符串对象中的 sds 会和字符串对象的 redisObject 结构一起分配
 // 因此这个字符也是不可修改的
-robj *createEmbeddedStringObject(char *ptr, size_t len) {
     robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr)+len+1);
+robj *createEmbeddedStringObject(char *ptr, size_t len) {
     struct sdshdr *sh = (void*)(o+1); //+1是偏移了一个sizeof(robj) //zjhadd
 
     o->type = REDIS_STRING;

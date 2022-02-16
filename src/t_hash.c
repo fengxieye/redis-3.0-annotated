@@ -1164,6 +1164,9 @@ cursor - 游标。
 pattern - 匹配的模式。
 count - 指定从数据集里返回多少元素，默认值为 10 ，不是一定按这个值来返回数量
 zjh
+
+当SCAN命令的游标参数被设置为 0 时， 服务器将开始一次新的迭代， 
+返回的第一个参数，当服务器向用户返回值为 0 的游标时， 表示迭代已结束，HSCAN同SCAN命令相同
 */
 void hscanCommand(redisClient *c) {
     robj *o;

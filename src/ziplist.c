@@ -1547,6 +1547,7 @@ unsigned int ziplistCompare(unsigned char *p, unsigned char *sstr, unsigned int 
  *
  * T = O(N^2)
  */
+//此函数是hash对象使用，方便查找key或value zjh
 unsigned char *ziplistFind(unsigned char *p, unsigned char *vstr, unsigned int vlen, unsigned int skip) {
     int skipcnt = 0;
     unsigned char vencoding = 0;
@@ -1580,6 +1581,7 @@ unsigned char *ziplistFind(unsigned char *p, unsigned char *vstr, unsigned int v
                 // 因为传入值有可能被编码了，
                 // 所以当第一次进行值对比时，程序会对传入值进行解码
                 // 这个解码操作只会进行一次
+                //节点的值不是字符串，尝试转化比较的值为数字与节点的值进行比较 zjh
                 if (vencoding == 0) {
                     if (!zipTryEncoding(vstr, vlen, &vll, &vencoding)) {
                         /* If the entry can't be encoded we set it to
