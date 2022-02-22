@@ -482,6 +482,7 @@ zskiplistNode *zslFirstInRange(zskiplist *zsl, zrangespec *range) {
     }
 
     /* This is an inner range, so the next node cannot be NULL. */
+    //小于min的最后一个节点，取下一个节点就是刚好大于min zjh
     x = x->level[0].forward;
     redisAssert(x != NULL);
 
@@ -1774,6 +1775,7 @@ void zaddGenericCommand(redisClient *c, int incr) {
     zobj = lookupKeyWrite(c->db,key);
     if (zobj == NULL) {
         // 有序集合不存在，创建新有序集合
+        // 单个key值小于64字节
         if (server.zset_max_ziplist_entries == 0 ||
             server.zset_max_ziplist_value < sdslen(c->argv[3]->ptr))
         {
@@ -2489,6 +2491,7 @@ int zuiNext(zsetopsrc *op, zsetopval *val) {
             val->score = it->sl.node->score;
 
             /* Move to next element. */
+            //直接在最低一层里遍历就好 zjh
             it->sl.node = it->sl.node->level[0].forward;
         } else {
             redisPanic("Unknown sorted set encoding");
@@ -3015,7 +3018,7 @@ void zunionstoreCommand(redisClient *c) {
 
 /*
 ZINTERSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]
-计算给定的一个或多个有序集的交集，其中给定 key 的数量必须以 numkeys 参数指定，并将该交集(结果集)储存到 destination 。
+计算给定的一个或多个有序集的 交集，其中给定 key 的数量必须以 numkeys 参数指定，并将该交集(结果集)储存到 destination 。
 默认情况下，结果集中某个成员的分数值是所有给定集下该成员分数值之和。
 */
 void zinterstoreCommand(redisClient *c) {
@@ -3144,7 +3147,7 @@ void zrangeCommand(redisClient *c) {
 }
 
 /*
-Redis Zrevrange 命令返回有序集中，指定区间内的成员。
+Redis Zrevrange 命令返回有序集中，指定区间内的成员。index区间
 其中成员的位置按分数值递减(从大到小)来排列。
 具有相同分数值的成员按字典序的逆序(reverse lexicographical order)排列。
 除了成员按分数值递减的次序排列这一点外， ZREVRANGE 命令的其他方面和 ZRANGE 命令一样。

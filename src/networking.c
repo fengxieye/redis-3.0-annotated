@@ -798,7 +798,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);
 
-//每次最多accept MAX_ACCEPTS_PER_CALL个，如果没有了就错误并且退出 zjh
+//每次最多accept MAX_ACCEPTS_PER_CALL个，一次回调可能是多个client同时连接，如果没有了就错误并且退出 zjh
     while(max--) {
         // accept 客户端连接
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
@@ -1370,6 +1370,7 @@ int processMultibulkBuffer(redisClient *c) {
 
         /* Read bulk length if unknown */
         // 读入参数长度
+        // 当前参数的长度，没读入之前是-1 zjhadd
         if (c->bulklen == -1) {
 
             // 确保 "\r\n" 存在
@@ -1426,6 +1427,7 @@ int processMultibulkBuffer(redisClient *c) {
                 qblen = sdslen(c->querybuf);
                 /* Hint the sds library about the amount of bytes this string is
                  * going to contain. */
+                // 说明从net没有读完这个参数，提前扩容 zjh
                 if (qblen < ll+2)
                     c->querybuf = sdsMakeRoomFor(c->querybuf,ll+2-qblen);
             }
@@ -1445,6 +1447,7 @@ int processMultibulkBuffer(redisClient *c) {
             /* Optimization: if the buffer contains JUST our bulk element
              * instead of creating a new object by *copying* the sds we
              * just use the current sds string. */
+            // 如果buffer刚好只剩下一个元素了，直接此sds当作参数，避免sds复制了 zjh
             if (pos == 0 &&
                 c->bulklen >= REDIS_MBULK_BIG_ARG &&
                 (signed) sdslen(c->querybuf) == c->bulklen+2)
@@ -1459,6 +1462,7 @@ int processMultibulkBuffer(redisClient *c) {
             } else {
                 c->argv[c->argc++] =
                     createStringObject(c->querybuf+pos,c->bulklen);
+                // 跳到下一个元素的位置 zjh
                 pos += c->bulklen+2;
             }
 
