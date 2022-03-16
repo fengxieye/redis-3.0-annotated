@@ -167,7 +167,7 @@ uint32_t rdbLoadLen(rio *rdb, int *isencoded) {
         if (isencoded) *isencoded = 1;
         return buf[0]&0x3F;
 
-    // 6 位整数
+    // 6 位整数 -- 这里是指长度，比如字符串的长度是6位整数 zjh
     } else if (type == REDIS_RDB_6BITLEN) {
         /* Read a 6 bit len. */
         return buf[0]&0x3F;
@@ -1118,6 +1118,7 @@ int rdbSaveBackground(char *filename) {
         server.stat_fork_time = ustime()-start;
 
         // 如果 fork() 出错，那么报告错误
+        // 错误之后要五秒之后再尝试，根据时间lastbgsave_try zjh
         if (childpid == -1) {
             server.lastbgsave_status = REDIS_ERR;
             redisLog(REDIS_WARNING,"Can't save in background: fork: %s",

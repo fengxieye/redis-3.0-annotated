@@ -157,7 +157,7 @@ robj *lookupKeyWriteOrReply(redisClient *c, robj *key, robj *reply) {
  *
  * 尝试将键值对 key 和 val 添加到数据库中。
  *
- * 调用者负责对 key 和 val 的引用计数进行增加。
+ * 调用者负责对 val 的引用计数进行增加。
  *
  * The program is aborted if the key already exists. 
  *
@@ -228,6 +228,7 @@ void setKey(redisDb *db, robj *key, robj *val) {
         dbOverwrite(db,key,val);
     }
 
+    //key是复制sds的，value是直接使用，所以value要incr zjh
     incrRefCount(val);
 
     // 移除键的过期时间
@@ -1328,6 +1329,7 @@ void expireCommand(redisClient *c) {
     expireGenericCommand(c,mstime(),UNIT_SECONDS);
 }
 
+//命令用于以 UNIX 时间戳(unix timestamp)格式设置 key 的过期时间 zjh
 void expireatCommand(redisClient *c) {
     expireGenericCommand(c,0,UNIT_SECONDS);
 }
@@ -1376,6 +1378,7 @@ void ttlGenericCommand(redisClient *c, int output_ms) {
     } else {
         // 返回 TTL 
         // (ttl+500)/1000 计算的是渐近秒数
+        // 秒数四舍五入 zjh
         addReplyLongLong(c,output_ms ? ttl : ((ttl+500)/1000));
     }
 }

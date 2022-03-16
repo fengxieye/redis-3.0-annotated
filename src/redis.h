@@ -890,7 +890,7 @@ struct redisServer {
     char *unixsocket;           /* UNIX socket path */
     mode_t unixsocketperm;      /* UNIX socket permission */
 
-    // 描述符
+    // 描述符，server设置的ip端口 zjh
     int ipfd[REDIS_BINDADDR_MAX]; /* TCP socket file descriptors */
     // 描述符数量
     int ipfd_count;             /* Used slots in ipfd[] */

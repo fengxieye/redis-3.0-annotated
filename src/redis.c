@@ -1467,19 +1467,19 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
         // 既然没有 BGSAVE 或者 BGREWRITEAOF 在执行，那么检查是否需要执行它们
 
         // 遍历所有保存条件，看是否需要执行 BGSAVE 命令
-         for (j = 0; j < server.saveparamslen; j++) {
+        for (j = 0; j < server.saveparamslen; j++) {
             struct saveparam *sp = server.saveparams+j;
 
             /* Save if we reached the given amount of changes,
-             * the given amount of seconds, and if the latest bgsave was
-             * successful or if, in case of an error, at least
-             * REDIS_BGSAVE_RETRY_DELAY seconds already elapsed. */
+                * the given amount of seconds, and if the latest bgsave was
+                * successful or if, in case of an error, at least
+                * REDIS_BGSAVE_RETRY_DELAY seconds already elapsed. */
             // 检查是否有某个保存条件已经满足了
             if (server.dirty >= sp->changes &&
                 server.unixtime-server.lastsave > sp->seconds &&
                 (server.unixtime-server.lastbgsave_try >
-                 REDIS_BGSAVE_RETRY_DELAY ||
-                 server.lastbgsave_status == REDIS_OK))
+                    REDIS_BGSAVE_RETRY_DELAY ||
+                    server.lastbgsave_status == REDIS_OK))
             {
                 redisLog(REDIS_NOTICE,"%d changes in %d seconds. Saving...",
                     sp->changes, (int)sp->seconds);
@@ -1487,7 +1487,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                 rdbSaveBackground(server.rdb_filename);
                 break;
             }
-         }
+        }
 
          /* Trigger an AOF rewrite if needed */
         // 出发 BGREWRITEAOF
@@ -1511,7 +1511,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
                 rewriteAppendOnlyFileBackground();
             }
          }
-    }
+    }//rdb end 
 
     // 根据 AOF 政策，
     // 考虑是否需要将 AOF 缓冲区中的内容写入到 AOF 文件中

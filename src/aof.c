@@ -890,6 +890,7 @@ int loadAppendOnlyFile(char *filename) {
         }
 
         // 读入文件内容到缓存
+        // 读一行，这里只读出了参数个数 zjh
         if (fgets(buf,sizeof(buf),fp) == NULL) {
             if (feof(fp))
                 // 文件已经读完，跳出
@@ -913,6 +914,7 @@ int loadAppendOnlyFile(char *filename) {
         // SET 、 KEY 、 VALUE
         argv = zmalloc(sizeof(robj*)*argc);
         for (j = 0; j < argc; j++) {
+            // 接着从文件读值 zjh
             if (fgets(buf,sizeof(buf),fp) == NULL) goto readerr;
 
             if (buf[0] != '$') goto fmterr;
@@ -1092,7 +1094,7 @@ int rewriteListObject(rio *r, robj *key, robj *o) {
             // 元素计数
             if (++count == REDIS_AOF_REWRITE_ITEMS_PER_CMD) count = 0;
 
-            items--;
+           9 items--;
         }
     } else {
         redisPanic("Unknown list encoding");
@@ -1566,6 +1568,7 @@ int rewriteAppendOnlyFileBackground(void) {
         server.aof_child_pid = childpid;
 
         // 关闭字典自动 rehash
+        // 避免因为数据改变导致memory page的改变过多，子进程复制的数据会变多，之前父子进程使用相同的内存 zjh
         updateDictResizePolicy();
 
         /* We set appendseldb to -1 in order to force the next call to the
