@@ -412,7 +412,7 @@ void flushAppendOnlyFile(int force) {
              * 如果后台还有 fsync 在执行，并且 write 已经推迟 >= 2 秒
              * 那么执行写操作（write 将被阻塞）
              */
-            server.aof_delayed_fsync++;
+            server.aof_delayed_fsync++; //单纯的记录 zjh
             redisLog(REDIS_NOTICE,"Asynchronous AOF fsync is taking too long (disk is busy?). Writing the AOF buffer without waiting for fsync to complete, this may slow down Redis.");
         }
     }
@@ -470,7 +470,7 @@ void flushAppendOnlyFile(int force) {
             }
 
             // 尝试移除新追加的不完整内容
-            //把本次写入的内存删除 zjh
+            //把本次写入的内存删除；ftruncate会将参数fd指定的文件大小改为参数length指定的大小。 zjh
             if (ftruncate(server.aof_fd, server.aof_current_size) == -1) {
                 if (can_log) {
                     redisLog(REDIS_WARNING, "Could not remove short write "
@@ -503,7 +503,7 @@ void flushAppendOnlyFile(int force) {
 
             /* Trim the sds buffer if there was a partial write, and there
              * was no way to undo it with ftruncate(2). */
-            //把已经写入的截取掉，剩下的下次再试 zjh
+            //如果上面的截取aof_fd失败，则把已经写入的aof_buf截取掉,防止重复写入，剩下的下次再试 zjh
             if (nwritten > 0) {
                 server.aof_current_size += nwritten;
                 sdsrange(server.aof_buf,nwritten,-1);
@@ -1566,8 +1566,8 @@ int rewriteAppendOnlyFileBackground(void) {
         server.aof_child_pid = childpid;
 
         // 关闭字典自动 rehash
-        updateDictResizePolicy();
 
+        updateDictResizePolicy();
         /* We set appendseldb to -1 in order to force the next call to the
          * feedAppendOnlyFile() to issue a SELECT command, so the differences
          * accumulated by the parent into server.aof_rewrite_buf will start
