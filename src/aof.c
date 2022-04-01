@@ -890,7 +890,6 @@ int loadAppendOnlyFile(char *filename) {
         }
 
         // 读入文件内容到缓存
-        // 读一行，这里只读出了参数个数 zjh
         if (fgets(buf,sizeof(buf),fp) == NULL) {
             if (feof(fp))
                 // 文件已经读完，跳出
@@ -914,7 +913,6 @@ int loadAppendOnlyFile(char *filename) {
         // SET 、 KEY 、 VALUE
         argv = zmalloc(sizeof(robj*)*argc);
         for (j = 0; j < argc; j++) {
-            // 接着从文件读值 zjh
             if (fgets(buf,sizeof(buf),fp) == NULL) goto readerr;
 
             if (buf[0] != '$') goto fmterr;
@@ -1094,7 +1092,7 @@ int rewriteListObject(rio *r, robj *key, robj *o) {
             // 元素计数
             if (++count == REDIS_AOF_REWRITE_ITEMS_PER_CMD) count = 0;
 
-           9 items--;
+            items--;
         }
     } else {
         redisPanic("Unknown list encoding");
