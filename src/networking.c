@@ -798,7 +798,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);
 
-//每次最多accept MAX_ACCEPTS_PER_CALL个，一次回调可能是多个client同时连接，如果没有了就错误并且退出 zjh
+//每次最多accept MAX_ACCEPTS_PER_CALL 个，一次回调可能是多个client同时连接，如果没有了就错误并且退出 zjh
     while(max--) {
         // accept 客户端连接
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
@@ -1484,6 +1484,7 @@ int processMultibulkBuffer(redisClient *c) {
 
     /* Still not read to process the command */
     // 如果还有参数未读取完，那么就协议内容有错
+    // 下次接着读
     return REDIS_ERR;
 }
 
@@ -1531,6 +1532,7 @@ void processInputBuffer(redisClient *c) {
         if (c->reqtype == REDIS_REQ_INLINE) {
             if (processInlineBuffer(c) != REDIS_OK) break;
         } else if (c->reqtype == REDIS_REQ_MULTIBULK) {
+            //没有读到完整的指令，先退出 zjh
             if (processMultibulkBuffer(c) != REDIS_OK) break;
         } else {
             redisPanic("Unknown request type");

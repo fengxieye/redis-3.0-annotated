@@ -159,7 +159,7 @@
 #define REDIS_CMD_NOT_USED_1 8              /* no longer used flag */
 #define REDIS_CMD_ADMIN 16                  /* "a" flag */
 #define REDIS_CMD_PUBSUB 32                 /* "p" flag */
-#define REDIS_CMD_NOSCRIPT  64              /* "s" flag */
+#define REDIS_CMD_NOSCRIPT  64              /* "s" flag */ //不能在脚本中执行的指令 zjh
 #define REDIS_CMD_RANDOM 128                /* "R" flag */
 #define REDIS_CMD_SORT_FOR_SCRIPT 256       /* "S" flag */
 #define REDIS_CMD_LOADING 512               /* "l" flag */
