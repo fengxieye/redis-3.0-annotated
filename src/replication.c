@@ -390,6 +390,7 @@ long long addReplyReplicationBacklog(redisClient *c, long long offset) {
      * split the reply in two parts if we are cross-boundary. */
     len = server.repl_backlog_histlen - skip;
     redisLog(REDIS_DEBUG, "[PSYNC] Reply total length: %lld", len);
+    //while：如果结束的idx比开始的idx小，则分两段写 zjh
     while(len) {
         long long thislen =
             ((server.repl_backlog_size - j) < len) ?
@@ -1351,7 +1352,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     // 如果状态为 CONNECTING ，那么在进行初次同步之前，
     // 向主服务器发送一个非阻塞的 PONG 
     // 因为接下来的 RDB 文件发送非常耗时，所以我们想确认主服务器真的能访问
-    //因为写缓存为空，所以连上服务器之后此函数基本会一直触发 zjh
+    // 因为写缓存为空，所以连上服务器之后此函数基本会一直触发 zjh
     if (server.repl_state == REDIS_REPL_CONNECTING) {
         redisLog(REDIS_NOTICE,"Non blocking connect for SYNC fired the event.");
         /* Delete the writable event so that the readable event remains

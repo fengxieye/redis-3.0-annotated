@@ -134,6 +134,7 @@ struct redisCommand *commandTable;
  *
  * r: read command  (will never modify the key space).
  *    读命令，不修改 key space
+ * 
  * m: may increase memory usage once called. Don't allow if out of memory.
  *    可能会占用大量内存的命令，调用时对内存占用进行检查
  *

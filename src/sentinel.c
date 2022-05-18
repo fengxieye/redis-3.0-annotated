@@ -197,6 +197,7 @@ typedef struct sentinelRedisInstance {
     sentinelAddr *addr; /* Master host. */
 
     // 用于发送命令的异步连接
+    // 连接master或salve的context zjh
     redisAsyncContext *cc; /* Hiredis context for commands. */
 
     // 用于执行 SUBSCRIBE 命令、接收频道信息的异步连接
@@ -392,7 +393,7 @@ struct sentinelState {
     // 一个 FIFO 队列，包含了所有需要执行的用户脚本
     list *scripts_queue;    /* Queue of user scripts to execute. */
 
-} sentinel;
+} sentinel; //此处直接创建了sentinel变量 zjh
 
 /* A script execution job. */
 // 脚本运行状态
@@ -2630,7 +2631,7 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
             sentinelEvent(REDIS_WARNING,"+promoted-slave",ri,"%@");
             sentinelEvent(REDIS_WARNING,"+failover-state-reconf-slaves",
                 ri->master,"%@");
-            // 执行脚本
+            // 执行脚本,配置文件里配置的文件 zjh
             sentinelCallClientReconfScript(ri->master,SENTINEL_LEADER,
                 "start",ri->master->addr,ri->addr);
 
@@ -4794,6 +4795,7 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
             break;
 
         // 等待升级生效，如果升级超时，那么重新选择新主服务器
+        // 应该是重新进行选举合故障 zjh
         // 具体情况请看 sentinelRefreshInstanceInfo 函数
         case SENTINEL_FAILOVER_STATE_WAIT_PROMOTION:
             sentinelFailoverWaitPromotion(ri);
